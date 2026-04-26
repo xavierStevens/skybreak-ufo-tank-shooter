@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UFO Tank Shooter</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="game-shell">
+      <canvas id="game-canvas" aria-label="UFO Tank Shooter game canvas"></canvas>
+
+      <section class="hud" aria-label="Game status">
+        <div class="brand">
+          <span class="brand-kicker">Operation</span>
+          <strong>Skybreak</strong>
+        </div>
+        <div class="stat">
+          <span>Score</span>
+          <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+          <span>Mission</span>
+          <strong id="wave">1</strong>
+        </div>
+        <div class="stat meter-stat">
+          <span>Hull</span>
+          <div class="meter">
+            <i id="hull-meter"></i>
+          </div>
+        </div>
+        <div class="stat meter-stat">
+          <span>Charge</span>
+          <div class="meter shell-meter">
+            <i id="charge-meter"></i>
+          </div>
+        </div>
+      </section>
+
+      <section class="comms" aria-live="polite">
+        <strong id="message-title">Incoming saucers</strong>
+        <span id="message-body">WASD or arrows to drive. Mouse/touch to aim. Click or space to fire.</span>
+      </section>
+
+      <section class="mobile-controls" aria-label="Touch controls">
+        <div class="drive-pad">
+          <button type="button" data-hold="forward" aria-label="Drive forward">▲</button>
+          <button type="button" data-hold="left" aria-label="Turn left">◀</button>
+          <button type="button" data-hold="backward" aria-label="Reverse">▼</button>
+          <button type="button" data-hold="right" aria-label="Turn right">▶</button>
+        </div>
+        <button type="button" class="fire-button" data-fire aria-label="Fire shell">FIRE</button>
+      </section>
+
+      <section class="start-panel" id="start-panel">
+        <div>
+          <span class="panel-kicker">Low-poly aerial defense</span>
+          <h1>UFO Tank Shooter</h1>
+          <p>Drive the ridge line, track the saucers, and knock them out across multiple mission maps.</p>
+          <button type="button" id="start-button">Start Mission</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
