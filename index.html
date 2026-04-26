@@ -64,7 +64,51 @@
           <span class="panel-kicker">Low-poly aerial defense</span>
           <h1>UFO Tank Shooter</h1>
           <p>Drive the ridge line, track the saucers, and knock them out across multiple mission maps.</p>
+          <div class="level-picker" id="level-picker" aria-label="Level picker"></div>
           <button type="button" id="start-button">Start Mission</button>
+        </div>
+      </section>
+
+      <section class="pause-panel is-hidden" id="pause-panel" aria-label="Pause menu">
+        <div class="pause-shell">
+          <div class="pause-main" id="pause-main">
+            <span class="panel-kicker">Mission paused</span>
+            <h2>Skybreak Menu</h2>
+            <button type="button" id="resume-button">Resume</button>
+            <button type="button" id="options-button">Options</button>
+            <button type="button" id="level-select-button">Level Select</button>
+            <button type="button" id="restart-button">Restart Mission</button>
+          </div>
+          <div class="options-main is-hidden" id="options-main">
+            <span class="panel-kicker">Options</span>
+            <h2>Controls</h2>
+            <div class="bind-grid" id="bind-grid"></div>
+            <label class="option-row">
+              <span>Difficulty</span>
+              <select id="difficulty-select">
+                <option value="casual">Casual</option>
+                <option value="standard">Standard</option>
+                <option value="veteran">Veteran</option>
+              </select>
+            </label>
+            <label class="option-row">
+              <span>Aim Assist</span>
+              <select id="assist-select">
+                <option value="high">High</option>
+                <option value="normal">Normal</option>
+                <option value="low">Low</option>
+              </select>
+            </label>
+            <label class="option-row">
+              <span>Tank Accent</span>
+              <select id="accent-select">
+                <option value="amber">Amber</option>
+                <option value="mint">Mint</option>
+                <option value="cobalt">Cobalt</option>
+              </select>
+            </label>
+            <button type="button" id="options-back-button">Back</button>
+          </div>
         </div>
       </section>
     </main>
