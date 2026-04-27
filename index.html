@@ -63,9 +63,54 @@
         <div>
           <span class="panel-kicker">Low-poly aerial defense</span>
           <h1>UFO Tank Shooter</h1>
-          <p>Drive the ridge line, track the saucers, and knock them out across multiple mission maps.</p>
-          <div class="level-picker" id="level-picker" aria-label="Level picker"></div>
-          <button type="button" id="start-button">Start Mission</button>
+          <p id="campaign-subtitle">Drive the ridge line, track the saucers, and fight through Operation Skybreak.</p>
+
+          <div class="campaign-home" id="campaign-home">
+            <div class="campaign-status" id="campaign-status"></div>
+            <div class="campaign-actions">
+              <button type="button" id="campaign-continue-button">Continue Campaign</button>
+              <button type="button" id="campaign-timeline-button">Mission Timeline</button>
+              <button type="button" id="campaign-hangar-button">Hangar Upgrades</button>
+              <button type="button" id="campaign-options-button">Options</button>
+            </div>
+          </div>
+
+          <div class="campaign-panel is-hidden" id="campaign-timeline">
+            <span class="panel-kicker">Mission timeline</span>
+            <div class="level-picker" id="level-picker" aria-label="Mission timeline"></div>
+            <button type="button" id="timeline-back-button">Back</button>
+          </div>
+
+          <div class="campaign-panel is-hidden" id="campaign-hangar">
+            <span class="panel-kicker">Hangar upgrades</span>
+            <div class="hangar-bank" id="hangar-salvage">Salvage: 0</div>
+            <div class="hangar-grid" id="hangar-grid"></div>
+            <button type="button" id="hangar-back-button">Back</button>
+          </div>
+
+          <div class="campaign-panel is-hidden" id="campaign-briefing">
+            <span class="panel-kicker" id="briefing-kicker">Mission briefing</span>
+            <h2 id="briefing-title">Briefing</h2>
+            <p id="briefing-body"></p>
+            <div class="briefing-facts">
+              <span id="briefing-objective"></span>
+              <span id="briefing-reward"></span>
+            </div>
+            <button type="button" id="start-button">Launch Mission</button>
+            <button type="button" id="briefing-back-button">Back</button>
+          </div>
+
+          <div class="campaign-panel is-hidden" id="campaign-debrief">
+            <span class="panel-kicker" id="debrief-kicker">Mission complete</span>
+            <h2 id="debrief-title">Debrief</h2>
+            <p id="debrief-body"></p>
+            <div class="debrief-stats" id="debrief-stats"></div>
+            <div class="campaign-actions">
+              <button type="button" id="debrief-continue-button">Continue</button>
+              <button type="button" id="debrief-hangar-button">Hangar</button>
+              <button type="button" id="debrief-timeline-button">Timeline</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -76,7 +121,7 @@
             <h2>Skybreak Menu</h2>
             <button type="button" id="resume-button">Resume</button>
             <button type="button" id="options-button">Options</button>
-            <button type="button" id="level-select-button">Level Select</button>
+            <button type="button" id="level-select-button">Mission Timeline</button>
             <button type="button" id="restart-button">Restart Mission</button>
           </div>
           <div class="options-main is-hidden" id="options-main">

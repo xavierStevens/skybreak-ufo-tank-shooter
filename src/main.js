@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+import {
+  CAMPAIGN_MISSIONS,
+  CAMPAIGN_SAVE_KEY,
+  LEGACY_PROGRESS_KEY,
+  UPGRADE_DEFINITIONS
+} from './campaign.js';
 
 const canvas = document.querySelector('#game-canvas');
 const ui = {
@@ -11,6 +17,34 @@ const ui = {
   startPanel: document.querySelector('#start-panel'),
   startButton: document.querySelector('#start-button'),
   levelPicker: document.querySelector('#level-picker'),
+  campaignHome: document.querySelector('#campaign-home'),
+  campaignTimeline: document.querySelector('#campaign-timeline'),
+  campaignHangar: document.querySelector('#campaign-hangar'),
+  campaignBriefing: document.querySelector('#campaign-briefing'),
+  campaignDebrief: document.querySelector('#campaign-debrief'),
+  campaignContinueButton: document.querySelector('#campaign-continue-button'),
+  campaignTimelineButton: document.querySelector('#campaign-timeline-button'),
+  campaignHangarButton: document.querySelector('#campaign-hangar-button'),
+  campaignOptionsButton: document.querySelector('#campaign-options-button'),
+  timelineBackButton: document.querySelector('#timeline-back-button'),
+  hangarBackButton: document.querySelector('#hangar-back-button'),
+  briefingBackButton: document.querySelector('#briefing-back-button'),
+  debriefContinueButton: document.querySelector('#debrief-continue-button'),
+  debriefHangarButton: document.querySelector('#debrief-hangar-button'),
+  debriefTimelineButton: document.querySelector('#debrief-timeline-button'),
+  campaignSubtitle: document.querySelector('#campaign-subtitle'),
+  campaignStatus: document.querySelector('#campaign-status'),
+  hangarGrid: document.querySelector('#hangar-grid'),
+  hangarSalvage: document.querySelector('#hangar-salvage'),
+  briefingKicker: document.querySelector('#briefing-kicker'),
+  briefingTitle: document.querySelector('#briefing-title'),
+  briefingBody: document.querySelector('#briefing-body'),
+  briefingObjective: document.querySelector('#briefing-objective'),
+  briefingReward: document.querySelector('#briefing-reward'),
+  debriefKicker: document.querySelector('#debrief-kicker'),
+  debriefTitle: document.querySelector('#debrief-title'),
+  debriefBody: document.querySelector('#debrief-body'),
+  debriefStats: document.querySelector('#debrief-stats'),
   pausePanel: document.querySelector('#pause-panel'),
   pauseMain: document.querySelector('#pause-main'),
   optionsMain: document.querySelector('#options-main'),
@@ -57,8 +91,8 @@ const tmpVecTwo = new THREE.Vector3();
 const upAxis = new THREE.Vector3(0, 1, 0);
 
 const DEFAULT_WORLD_SIZE = 92;
+const BASE_HULL = 100;
 const SETTINGS_KEY = 'skybreak-settings-v2';
-const PROGRESS_KEY = 'skybreak-progress-v2';
 const CONTROL_ACTIONS = [
   { id: 'forward', label: 'Forward' },
   { id: 'backward', label: 'Reverse' },
@@ -103,238 +137,8 @@ const UFO_TYPES = {
   carrier: { label: 'Carrier', speed: 0.68, hit: 1.28, hpBonus: 4, value: 2.7, beam: 1.55, wobble: 1.1, radiusBonus: 0.7 }
 };
 const settings = loadSettings();
+const campaign = loadCampaignState();
 let waitingForBind = null;
-
-const MISSIONS = [
-  {
-    id: 'training-range',
-    title: 'Level 1: Training Range',
-    mapName: 'Amber Range',
-    objective: 'Destroy 4 scout UFOs.',
-    intro: 'Four slow scouts, generous aim assist, and only one target overhead at a time.',
-    success: 'Range clear. Radar crew has opened the salt-flat relay road.',
-    worldSize: 92,
-    ufoLimit: 52,
-    cameraHeight: 24,
-    cameraDistance: 32,
-    sky: 0x1b2630,
-    fog: 0x9b8060,
-    fogDensity: 0.011,
-    ground: 0xb98b4f,
-    groundDark: 0x8e6b42,
-    scrub: 0x4a6a54,
-    ridge: 0x6e5547,
-    accent: 0xf3bd55,
-    rocks: 38,
-    cactus: 14,
-    ridges: 14,
-    extras: 'runway',
-    objectiveType: 'destroy',
-    destroyTarget: 4,
-    ufoTotal: 4,
-    maxActive: 1,
-    spawnDelay: [1.6, 2.35],
-    firstSpawn: 0.45,
-    speed: [3.8, 5.1],
-    altitude: [9.8, 15.5],
-    drift: 0.55,
-    hitAssist: 4.9,
-    shellSpeed: 42,
-    fireDelay: 0.2,
-    beamDamage: 1.9,
-    escapeDamage: 2.5,
-    score: 150,
-    maxUfoHp: 1,
-    ufoMix: [{ type: 'scout', weight: 1 }]
-  },
-  {
-    id: 'relay-defense',
-    title: 'Level 2: Relay Defense',
-    mapName: 'Salt Relay',
-    objective: 'Destroy 7 UFOs while at least one relay tower survives.',
-    intro: 'The saucers will try to burn down the relay towers. Break their attack runs.',
-    success: 'Relay held. The ridge network is back online.',
-    worldSize: 110,
-    ufoLimit: 63,
-    cameraHeight: 25,
-    cameraDistance: 35,
-    sky: 0x182830,
-    fog: 0x8fa7a0,
-    fogDensity: 0.012,
-    ground: 0xa4a58f,
-    groundDark: 0x6f7f79,
-    scrub: 0x3e6c64,
-    ridge: 0x596765,
-    accent: 0x7de0c5,
-    rocks: 42,
-    cactus: 8,
-    ridges: 16,
-    extras: 'relays',
-    objectiveType: 'protect',
-    destroyTarget: 7,
-    ufoTotal: 8,
-    maxActive: 2,
-    spawnDelay: [1.75, 2.65],
-    firstSpawn: 0.7,
-    speed: [4.8, 6.9],
-    altitude: [10.5, 17.5],
-    drift: 1.2,
-    hitAssist: 3.8,
-    shellSpeed: 41,
-    fireDelay: 0.24,
-    beamDamage: 2.9,
-    towerDamage: 7.2,
-    escapeDamage: 4,
-    score: 190,
-    maxUfoHp: 1,
-    ufoMix: [
-      { type: 'scout', weight: 3 },
-      { type: 'raider', weight: 2 },
-      { type: 'bomber', weight: 1 }
-    ]
-  },
-  {
-    id: 'night-canyon',
-    title: 'Level 3: Night Canyon',
-    mapName: 'Cobalt Canyon',
-    objective: 'Survive 75 seconds and destroy 9 raiders.',
-    intro: 'A longer canyon push with skimmers that weave across your aim line.',
-    success: 'Canyon sky is clear. Storm front coordinates received.',
-    worldSize: 126,
-    ufoLimit: 72,
-    cameraHeight: 27,
-    cameraDistance: 38,
-    sky: 0x101923,
-    fog: 0x27324a,
-    fogDensity: 0.016,
-    ground: 0x5d5e6a,
-    groundDark: 0x3d4253,
-    scrub: 0x315c61,
-    ridge: 0x282d3d,
-    accent: 0x9fc7ff,
-    rocks: 54,
-    cactus: 5,
-    ridges: 24,
-    extras: 'beacons',
-    objectiveType: 'survive',
-    destroyTarget: 9,
-    survivalTime: 75,
-    ufoTotal: 12,
-    maxActive: 2,
-    spawnDelay: [1.55, 2.25],
-    firstSpawn: 0.7,
-    speed: [5.9, 8.1],
-    altitude: [12, 20],
-    drift: 1.6,
-    hitAssist: 3.4,
-    shellSpeed: 42,
-    fireDelay: 0.23,
-    beamDamage: 3.25,
-    escapeDamage: 5,
-    score: 230,
-    maxUfoHp: 2,
-    ufoMix: [
-      { type: 'raider', weight: 3 },
-      { type: 'zigzag', weight: 3 },
-      { type: 'shield', weight: 1 }
-    ]
-  },
-  {
-    id: 'storm-atoll',
-    title: 'Level 4: Storm Atoll',
-    mapName: 'Storm Atoll',
-    objective: 'Destroy 11 UFOs before the storm corridor closes.',
-    intro: 'Wide open map. Skimmers swing laterally and bombers make slow, dangerous beam runs.',
-    success: 'Atoll corridor is open. Mothership gate is exposed.',
-    worldSize: 144,
-    ufoLimit: 84,
-    cameraHeight: 29,
-    cameraDistance: 42,
-    sky: 0x17232f,
-    fog: 0x547b86,
-    fogDensity: 0.013,
-    ground: 0x7b8063,
-    groundDark: 0x53635c,
-    scrub: 0x2f6f62,
-    ridge: 0x3f565b,
-    accent: 0x7de0c5,
-    rocks: 58,
-    cactus: 4,
-    ridges: 22,
-    extras: 'storm',
-    objectiveType: 'destroy',
-    destroyTarget: 11,
-    ufoTotal: 13,
-    maxActive: 3,
-    spawnDelay: [1.4, 2.1],
-    firstSpawn: 0.75,
-    speed: [6.2, 8.4],
-    altitude: [12.5, 22],
-    drift: 1.95,
-    hitAssist: 3.1,
-    shellSpeed: 43,
-    fireDelay: 0.22,
-    beamDamage: 3.45,
-    escapeDamage: 5.2,
-    score: 275,
-    maxUfoHp: 2,
-    timeLimit: 115,
-    ufoMix: [
-      { type: 'zigzag', weight: 4 },
-      { type: 'raider', weight: 3 },
-      { type: 'bomber', weight: 2 },
-      { type: 'shield', weight: 1 }
-    ]
-  },
-  {
-    id: 'mothership-gate',
-    title: 'Level 5: Mothership Gate',
-    mapName: 'Mothership Gate',
-    objective: 'Survive 100 seconds and destroy 14 UFOs, including heavy carriers.',
-    intro: 'The final map is long, dense, and vertical. Carriers take several hits but score big.',
-    success: 'Mothership gate collapsed. Skybreak is secure.',
-    worldSize: 164,
-    ufoLimit: 94,
-    cameraHeight: 31,
-    cameraDistance: 46,
-    sky: 0x0e141e,
-    fog: 0x202544,
-    fogDensity: 0.014,
-    ground: 0x4f535c,
-    groundDark: 0x303846,
-    scrub: 0x315565,
-    ridge: 0x20283a,
-    accent: 0x9fc7ff,
-    rocks: 70,
-    cactus: 0,
-    ridges: 28,
-    extras: 'gate',
-    objectiveType: 'survive',
-    destroyTarget: 14,
-    survivalTime: 100,
-    ufoTotal: 17,
-    maxActive: 3,
-    spawnDelay: [1.25, 1.95],
-    firstSpawn: 0.7,
-    speed: [6.6, 9.4],
-    altitude: [14, 24],
-    drift: 2.25,
-    hitAssist: 2.8,
-    shellSpeed: 44,
-    fireDelay: 0.21,
-    beamDamage: 3.8,
-    escapeDamage: 6,
-    score: 330,
-    maxUfoHp: 2,
-    ufoMix: [
-      { type: 'raider', weight: 3 },
-      { type: 'zigzag', weight: 3 },
-      { type: 'shield', weight: 2 },
-      { type: 'bomber', weight: 2 },
-      { type: 'carrier', weight: 1 }
-    ]
-  }
-];
 
 const game = {
   active: false,
@@ -342,17 +146,19 @@ const game = {
   over: false,
   completed: false,
   score: 0,
-  missionIndex: 0,
-  unlockedMission: loadProgress(),
-  hull: 100,
+  missionIndex: campaign.currentMission,
+  unlockedMission: campaign.unlockedMission,
+  hull: maxHull(),
   fireCooldown: 0,
   missionSpawnLeft: 0,
   missionSpawnTimer: 0,
   missionKills: 0,
   missionElapsed: 0,
   missionBreak: 0,
+  lastDebrief: null,
   messageTimer: 0,
-  shake: 0
+  shake: 0,
+  radioFired: new Set()
 };
 
 const input = {
@@ -368,7 +174,10 @@ const ufos = [];
 const shells = [];
 const sparks = [];
 const towers = [];
+const objectives = [];
 let worldGroup = new THREE.Group();
+let objectiveState = {};
+let audioContext = null;
 
 const materials = {
   sand: new THREE.MeshStandardMaterial({ color: 0xb98b4f, roughness: 0.9, flatShading: true }),
@@ -399,6 +208,9 @@ const materials = {
     flatShading: true
   }),
   gateStone: new THREE.MeshStandardMaterial({ color: 0x2f3b4c, metalness: 0.06, roughness: 0.8, flatShading: true }),
+  objectiveCore: new THREE.MeshStandardMaterial({ color: 0xfff0a8, emissive: 0xf3bd55, emissiveIntensity: 1.4, roughness: 0.2, flatShading: true }),
+  objectiveActive: new THREE.MeshStandardMaterial({ color: 0x9ffff0, emissive: 0x7de0c5, emissiveIntensity: 1.6, roughness: 0.25, flatShading: true }),
+  objectiveDark: new THREE.MeshStandardMaterial({ color: 0x405054, metalness: 0.18, roughness: 0.7, flatShading: true }),
   beam: new THREE.MeshBasicMaterial({
     color: 0x8fffe2,
     transparent: true,
@@ -419,8 +231,10 @@ applySettings();
 syncOptionControls();
 renderBindings();
 renderLevelPicker();
+renderCampaignHome();
+renderHangar();
 resize();
-setMissionPanel(false);
+showCampaignView('home');
 window.__skybreakDebug = {
   getState: () => ({
     active: game.active,
@@ -430,8 +244,24 @@ window.__skybreakDebug = {
     score: game.score,
     missionIndex: game.missionIndex,
     missionTitle: currentMission().title,
-    missionCount: MISSIONS.length,
+    missionCount: CAMPAIGN_MISSIONS.length,
     worldSize: missionWorldSize(currentMission()),
+    campaign: {
+      currentMission: campaign.currentMission,
+      unlockedMission: campaign.unlockedMission,
+      completed: { ...campaign.completed },
+      medals: { ...campaign.medals },
+      salvage: campaign.salvage,
+      upgrades: { ...campaign.upgrades }
+    },
+    objectives: {
+      type: objectiveState.type,
+      returned: objectiveState.returned,
+      activated: objectiveState.activated?.filter(Boolean).length ?? 0,
+      pylonsDisabled: objectiveState.pylonsDisabled,
+      bossSpawned: objectiveState.bossSpawned,
+      bossDestroyed: objectiveState.bossDestroyed
+    },
     settings: {
       difficulty: settings.difficulty,
       assist: settings.assist,
@@ -458,12 +288,47 @@ window.__skybreakDebug = {
     shells: shells.length,
     sparks: sparks.length,
     towers: towers.map((tower) => Math.round(tower.health))
-  })
+  }),
+  grantSalvage: (amount = 500) => {
+    campaign.salvage += Math.max(0, Math.floor(amount));
+    saveCampaignState();
+    renderCampaignHome();
+    renderHangar();
+  },
+  unlockAll: () => {
+    campaign.unlockedMission = CAMPAIGN_MISSIONS.length - 1;
+    saveCampaignState();
+    renderCampaignHome();
+    renderLevelPicker();
+  },
+  selectMission,
+  resetCampaign,
+  satisfyObjective: () => {
+    const mission = currentMission();
+    const script = mission.objectiveScript ?? {};
+    game.missionKills = Math.max(game.missionKills, mission.destroyTarget ?? 0);
+    game.missionElapsed = Math.max(game.missionElapsed, mission.survivalTime ?? 0);
+    if (mission.objectiveType === 'collect') objectiveState.returned = script.total ?? 0;
+    if (mission.objectiveType === 'activate') objectiveState.activated = Array(script.nodes ?? 0).fill(true);
+    if (mission.objectiveType === 'boss') {
+      objectiveState.pylonsDisabled = script.pylons ?? 0;
+      objectiveState.bossSpawned = true;
+      objectiveState.bossDestroyed = true;
+    }
+    if (mission.objectiveType === 'protect') {
+      for (const tower of towers) tower.health = Math.max(tower.health, 25);
+    }
+  },
+  forceComplete: () => {
+    if (!game.active) beginMission(currentMission());
+    completeMission();
+  }
 };
 requestAnimationFrame(tick);
 
 function currentMission() {
-  return MISSIONS[game.missionIndex];
+  const index = THREE.MathUtils.clamp(game.missionIndex, 0, CAMPAIGN_MISSIONS.length - 1);
+  return CAMPAIGN_MISSIONS[index];
 }
 
 function missionWorldSize(mission = currentMission()) {
@@ -488,6 +353,42 @@ function assistProfile() {
 
 function missionMaxActive(mission) {
   return Math.max(1, mission.maxActive + difficultyProfile().activeBonus);
+}
+
+function upgradeTierData(id) {
+  const upgrade = UPGRADE_DEFINITIONS.find((item) => item.id === id);
+  const tier = THREE.MathUtils.clamp(campaign.upgrades[id] ?? 0, 0, upgrade?.tiers.length ?? 0);
+  return tier > 0 ? upgrade.tiers[tier - 1] : {};
+}
+
+function upgradeStats() {
+  const armor = upgradeTierData('armor');
+  const capacitor = upgradeTierData('capacitor');
+  const guidance = upgradeTierData('guidance');
+  const fieldRepair = upgradeTierData('fieldRepair');
+  return {
+    maxHullBonus: armor.maxHullBonus ?? 0,
+    fireDelayMultiplier: capacitor.fireDelayMultiplier ?? 1,
+    guidanceBonus: guidance.guidanceBonus ?? 0,
+    hitAssistBonus: guidance.hitAssistBonus ?? 0,
+    repairBonus: fieldRepair.repairBonus ?? 0
+  };
+}
+
+function maxHull() {
+  return BASE_HULL + upgradeStats().maxHullBonus;
+}
+
+function missionFireDelay(mission) {
+  return mission.fireDelay * upgradeStats().fireDelayMultiplier;
+}
+
+function missionHitAssist(mission) {
+  return mission.hitAssist + upgradeStats().hitAssistBonus;
+}
+
+function shellGuidanceStrength(base) {
+  return base + upgradeStats().guidanceBonus;
 }
 
 function setupLights() {
@@ -528,6 +429,7 @@ function buildWorld(mission) {
   worldGroup = new THREE.Group();
   scene.add(worldGroup);
   towers.length = 0;
+  objectives.length = 0;
 
   const size = missionWorldSize(mission);
   const half = halfWorld(mission);
@@ -590,7 +492,13 @@ function buildWorld(mission) {
   if (mission.extras === 'relays') buildRelayMap();
   if (mission.extras === 'beacons') buildBeaconMap();
   if (mission.extras === 'storm') buildStormMap();
+  if (mission.extras === 'glass') buildGlassMap();
+  if (mission.extras === 'decoy') buildDecoyMap();
+  if (mission.extras === 'mesa') buildMesaMap();
+  if (mission.extras === 'eclipse') buildEclipseMap();
+  if (mission.extras === 'command') buildCommandMap();
   if (mission.extras === 'gate') buildGateMap();
+  buildObjectiveProps(mission);
 }
 
 function buildRunway() {
@@ -720,6 +628,173 @@ function buildGateMap() {
   }
 }
 
+function buildGlassMap() {
+  buildStormMap();
+  const half = halfWorld();
+  for (let i = 0; i < 12; i += 1) {
+    const shard = new THREE.Mesh(new THREE.OctahedronGeometry(random(0.35, 0.85), 0), materials.objectiveCore);
+    shard.position.set(random(-half * 0.62, half * 0.62), random(0.45, 1.3), random(-half * 0.62, half * 0.62));
+    if (shard.position.length() < 14) shard.position.normalize().multiplyScalar(random(18, 28));
+    shard.rotation.set(random(0, Math.PI), random(0, Math.PI), random(0, Math.PI));
+    shard.castShadow = true;
+    worldGroup.add(shard);
+  }
+}
+
+function buildDecoyMap() {
+  const half = halfWorld();
+  const bunker = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(9, 1.2, 7), materials.darkerSand);
+  base.position.y = 0.6;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  bunker.add(base);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.42, 8.6, 6), materials.tower);
+  mast.position.y = 5;
+  mast.castShadow = true;
+  bunker.add(mast);
+  const dish = new THREE.Mesh(new THREE.TorusGeometry(1.65, 0.12, 6, 16), materials.towerLit);
+  dish.position.y = 9.4;
+  dish.rotation.x = Math.PI / 2;
+  bunker.add(dish);
+  const lamp = new THREE.PointLight(0xff9a58, 1.8, 24);
+  lamp.position.y = 9.4;
+  bunker.add(lamp);
+  bunker.position.set(0, 0, -12);
+  worldGroup.add(bunker);
+
+  for (let i = 0; i < 5; i += 1) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(random(7, 13), random(1.4, 2.4), random(1.5, 2.6)), materials.mountain);
+    const angle = (i / 5) * Math.PI * 2 + 0.25;
+    wall.position.set(Math.sin(angle) * half * 0.48, wall.geometry.parameters.height * 0.5, Math.cos(angle) * half * 0.48);
+    wall.rotation.y = -angle + random(-0.25, 0.25);
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    worldGroup.add(wall);
+  }
+}
+
+function buildMesaMap() {
+  const half = halfWorld();
+  for (let i = 0; i < 7; i += 1) {
+    const mesa = new THREE.Mesh(new THREE.CylinderGeometry(random(5, 10), random(7, 13), random(2.2, 5.4), 6), materials.mountain);
+    const angle = (i / 7) * Math.PI * 2 + random(-0.12, 0.12);
+    const radius = random(half * 0.22, half * 0.68);
+    mesa.position.set(Math.sin(angle) * radius, mesa.geometry.parameters.height * 0.48, Math.cos(angle) * radius);
+    mesa.rotation.y = random(0, Math.PI);
+    mesa.scale.y = random(0.75, 1.35);
+    mesa.castShadow = true;
+    mesa.receiveShadow = true;
+    worldGroup.add(mesa);
+  }
+}
+
+function buildEclipseMap() {
+  buildBeaconMap();
+  const half = halfWorld();
+  for (let i = 0; i < 4; i += 1) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(random(5.5, 8.5), 0.16, 6, 18), materials.objectiveDark);
+    const angle = Math.PI / 4 + (i / 4) * Math.PI * 2;
+    ring.position.set(Math.sin(angle) * half * 0.42, 0.16, Math.cos(angle) * half * 0.42);
+    ring.rotation.x = Math.PI / 2;
+    ring.receiveShadow = true;
+    worldGroup.add(ring);
+  }
+}
+
+function buildCommandMap() {
+  [
+    new THREE.Vector3(-20, 0, -18),
+    new THREE.Vector3(21, 0, -14),
+    new THREE.Vector3(-12, 0, 22),
+    new THREE.Vector3(18, 0, 18)
+  ].forEach((position, index) => {
+    const tower = createRelayTower(index);
+    tower.group.position.copy(position);
+    tower.health = 125;
+    worldGroup.add(tower.group);
+    towers.push(tower);
+  });
+
+  for (let i = 0; i < 5; i += 1) {
+    const bunker = new THREE.Mesh(new THREE.BoxGeometry(6, 1.1, 4.5), materials.darkerSand);
+    bunker.position.set(random(-26, 26), 0.55, random(-26, 26));
+    if (bunker.position.length() < 10) bunker.position.normalize().multiplyScalar(14);
+    bunker.rotation.y = random(0, Math.PI);
+    bunker.castShadow = true;
+    bunker.receiveShadow = true;
+    worldGroup.add(bunker);
+  }
+}
+
+function buildObjectiveProps(mission) {
+  const script = mission.objectiveScript ?? {};
+  if (mission.objectiveType === 'collect') {
+    objectivePositions(script.total ?? 3, halfWorld(mission) * 0.44, -0.35).forEach((position, index) => {
+      const marker = createObjectiveMarker('core', index);
+      marker.position.copy(position);
+      worldGroup.add(marker);
+      objectives.push({ type: 'core', index, group: marker, active: true });
+    });
+  }
+
+  if (mission.objectiveType === 'activate') {
+    const radius = (script.nodes ?? 1) === 1 ? 13 : halfWorld(mission) * 0.4;
+    objectivePositions(script.nodes ?? 1, radius, 0.1).forEach((position, index) => {
+      const marker = createObjectiveMarker('beacon', index);
+      marker.position.copy(position);
+      worldGroup.add(marker);
+      objectives.push({ type: 'beacon', index, group: marker, active: false });
+    });
+  }
+
+  if (mission.objectiveType === 'boss' && script.pylons) {
+    objectivePositions(script.pylons, halfWorld(mission) * 0.38, Math.PI).forEach((position, index) => {
+      const marker = createObjectiveMarker('pylon', index);
+      marker.position.copy(position);
+      worldGroup.add(marker);
+      objectives.push({ type: 'pylon', index, group: marker, active: true });
+    });
+  }
+}
+
+function objectivePositions(count, radius, offset = 0) {
+  if (count === 1) return [new THREE.Vector3(0, 0, -radius)];
+  return Array.from({ length: count }, (_, index) => {
+    const angle = offset + (index / count) * Math.PI * 2;
+    return new THREE.Vector3(Math.sin(angle) * radius, 0, Math.cos(angle) * radius);
+  });
+}
+
+function createObjectiveMarker(kind, index) {
+  const group = new THREE.Group();
+  const baseRadius = kind === 'pylon' ? 2.4 : 2.9;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(baseRadius, baseRadius * 1.14, 0.34, 8), materials.objectiveDark);
+  base.position.y = 0.17;
+  base.receiveShadow = true;
+  group.add(base);
+
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(baseRadius * 1.18, 0.08, 6, 18), materials.objectiveActive);
+  ring.position.y = 0.42;
+  ring.rotation.x = Math.PI / 2;
+  group.add(ring);
+
+  const coreGeometry = kind === 'pylon'
+    ? new THREE.ConeGeometry(0.8, 5.8, 5)
+    : new THREE.OctahedronGeometry(kind === 'core' ? 1.1 : 0.72, 0);
+  const core = new THREE.Mesh(coreGeometry, kind === 'core' ? materials.objectiveCore : materials.objectiveActive);
+  core.position.y = kind === 'pylon' ? 3.2 : 1.55;
+  core.castShadow = true;
+  group.add(core);
+
+  const light = new THREE.PointLight(kind === 'core' ? 0xf3bd55 : 0x7de0c5, kind === 'pylon' ? 1.9 : 1.35, kind === 'pylon' ? 20 : 15);
+  light.position.y = kind === 'pylon' ? 4.6 : 1.8;
+  group.add(light);
+
+  group.userData = { kind, index, base, ring, core, light };
+  return group;
+}
+
 function createRelayTower(index) {
   const group = new THREE.Group();
   const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.45, 0.35, 8), materials.darkerSand);
@@ -829,12 +904,13 @@ function createTank() {
   return { group, turret, muzzle };
 }
 
-function createUfo(mission) {
+function createUfo(mission, options = {}) {
   const group = new THREE.Group();
-  const type = pickUfoType(mission);
+  const type = options.type ?? pickUfoType(mission);
   const profile = UFO_TYPES[type] ?? UFO_TYPES.scout;
   const difficulty = difficultyProfile();
-  const radius = random(1.55 + (profile.radiusBonus ?? 0), 2.1 + (profile.radiusBonus ?? 0));
+  const bossScale = options.isBoss ? 1.22 : 1;
+  const radius = random(1.55 + (profile.radiusBonus ?? 0), 2.1 + (profile.radiusBonus ?? 0)) * bossScale;
   const body = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.02, radius * 1.45, 0.42, 12), materials.ufoHull);
   body.castShadow = true;
   group.add(body);
@@ -884,13 +960,16 @@ function createUfo(mission) {
 
   const side = Math.floor(random(0, 4));
   const altitude = random(mission.altitude[0], mission.altitude[1]);
-  const speed = random(mission.speed[0], mission.speed[1]) * profile.speed * difficulty.speed;
+  const speed = random(mission.speed[0], mission.speed[1]) * profile.speed * difficulty.speed * (options.isBoss ? 0.68 : 1);
   const limit = ufoLimit(mission);
   const span = Math.max(26, halfWorld(mission) - 10);
   const pos = new THREE.Vector3();
   const vel = new THREE.Vector3();
 
-  if (side === 0) {
+  if (options.isBoss) {
+    pos.set(random(-span * 0.28, span * 0.28), altitude + 2.2, -limit + 6);
+    vel.set(random(-0.7, 0.7), random(-0.08, 0.08), Math.max(2.8, speed));
+  } else if (side === 0) {
     pos.set(-limit, altitude, random(-span, span));
     vel.set(speed, random(-0.16, 0.16), random(-mission.drift, mission.drift));
   } else if (side === 1) {
@@ -905,7 +984,12 @@ function createUfo(mission) {
   }
 
   group.position.copy(pos);
+  if (options.isBoss) group.scale.setScalar(1.08);
   scene.add(group);
+
+  const hp = options.isBoss
+    ? options.hp ?? 8
+    : Math.max(1, (mission.maxUfoHp > 1 && Math.random() > 0.55 ? 2 : 1) + profile.hpBonus);
 
   return {
     group,
@@ -913,15 +997,18 @@ function createUfo(mission) {
     shield,
     velocity: vel,
     radius: radius * 1.55,
-    hitRadius: radius * profile.hit + mission.hitAssist * assistProfile().radius,
-    hp: Math.max(1, (mission.maxUfoHp > 1 && Math.random() > 0.55 ? 2 : 1) + profile.hpBonus),
+    hitRadius: radius * profile.hit + missionHitAssist(mission) * assistProfile().radius,
+    hp,
+    maxHp: hp,
+    isBoss: Boolean(options.isBoss),
+    phaseTriggered: false,
     type,
     profile,
     lateralForce: profile.lateral ?? 0,
     beamPower: profile.beam,
     wobble: random(0, Math.PI * 2),
     wobbleSpeed: profile.wobble,
-    value: Math.round(mission.score * profile.value * difficulty.score)
+    value: Math.round(mission.score * profile.value * difficulty.score * (options.isBoss ? 2.4 : 1))
   };
 }
 
@@ -1007,20 +1094,60 @@ function bindInput() {
   fireButton.addEventListener('lostpointercapture', stopFire);
 
   ui.startButton.addEventListener('click', () => {
+    unlockAudio();
+    playSfx('ui');
     if (game.over || game.completed) {
       game.score = 0;
-      game.hull = 100;
+      game.hull = maxHull();
       game.over = false;
       game.completed = false;
     }
     startMission();
   });
 
+  ui.campaignContinueButton.addEventListener('click', () => {
+    unlockAudio();
+    playSfx('ui');
+    if (campaign.currentMission >= CAMPAIGN_MISSIONS.length) showCampaignView('timeline');
+    else selectMission(campaign.currentMission);
+  });
+  ui.campaignTimelineButton.addEventListener('click', () => {
+    playSfx('ui');
+    showCampaignView('timeline');
+  });
+  ui.campaignHangarButton.addEventListener('click', () => {
+    playSfx('ui');
+    showCampaignView('hangar');
+  });
+  ui.campaignOptionsButton.addEventListener('click', () => {
+    playSfx('ui');
+    ui.pausePanel.classList.remove('is-hidden');
+    showOptions(true);
+  });
+  ui.timelineBackButton.addEventListener('click', () => showCampaignView('home'));
+  ui.hangarBackButton.addEventListener('click', () => showCampaignView('home'));
+  ui.briefingBackButton.addEventListener('click', () => showCampaignView('timeline'));
+  ui.debriefContinueButton.addEventListener('click', () => {
+    if (game.lastDebrief && !game.lastDebrief.success) {
+      const retryIndex = CAMPAIGN_MISSIONS.findIndex((mission) => mission.id === game.lastDebrief.missionId);
+      selectMission(Math.max(0, retryIndex));
+      return;
+    }
+    if (campaign.currentMission >= CAMPAIGN_MISSIONS.length) showCampaignView('timeline');
+    else selectMission(campaign.currentMission);
+  });
+  ui.debriefHangarButton.addEventListener('click', () => showCampaignView('hangar'));
+  ui.debriefTimelineButton.addEventListener('click', () => showCampaignView('timeline'));
+
   ui.resumeButton.addEventListener('click', () => setPaused(false));
   ui.optionsButton.addEventListener('click', () => showOptions(true));
   ui.optionsBackButton.addEventListener('click', () => showOptions(false));
   ui.restartButton.addEventListener('click', () => {
     setPaused(false);
+    game.score = 0;
+    game.hull = maxHull();
+    game.over = false;
+    game.completed = false;
     beginMission(currentMission());
   });
   ui.levelSelectButton.addEventListener('click', () => {
@@ -1029,7 +1156,7 @@ function bindInput() {
     game.over = false;
     resetMissionState();
     buildWorld(currentMission());
-    setMissionPanel(false);
+    showCampaignView('timeline');
   });
 
   ui.bindGrid.addEventListener('click', (event) => {
@@ -1152,12 +1279,14 @@ function renderBindings() {
 
 function renderLevelPicker() {
   ui.levelPicker.replaceChildren();
-  MISSIONS.forEach((mission, index) => {
+  CAMPAIGN_MISSIONS.forEach((mission, index) => {
+    const locked = index > campaign.unlockedMission;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'level-card';
+    button.className = locked ? 'level-card is-locked' : 'level-card';
     button.dataset.levelIndex = String(index);
     if (index === game.missionIndex) button.classList.add('is-selected');
+    button.disabled = locked;
 
     const title = document.createElement('strong');
     title.textContent = mission.title.replace(': ', ' - ');
@@ -1167,24 +1296,190 @@ function renderLevelPicker() {
     objective.textContent = mission.objective;
     const progress = document.createElement('span');
     progress.className = 'level-progress';
-    progress.textContent = index <= game.unlockedMission ? 'Campaign route' : 'Free play preview';
+    progress.textContent = campaign.completed[mission.id]
+      ? 'Complete / ' + (campaign.medals[mission.id] ?? 'bronze').toUpperCase()
+      : locked
+        ? 'Locked'
+        : index === campaign.currentMission
+          ? 'Next sortie'
+          : 'Unlocked';
     button.append(title, map, objective, progress);
     button.addEventListener('click', () => selectMission(index));
     ui.levelPicker.append(button);
   });
 }
 
+function showCampaignView(view) {
+  const panels = {
+    home: ui.campaignHome,
+    timeline: ui.campaignTimeline,
+    hangar: ui.campaignHangar,
+    briefing: ui.campaignBriefing,
+    debrief: ui.campaignDebrief
+  };
+
+  for (const [name, panel] of Object.entries(panels)) {
+    panel.classList.toggle('is-hidden', name !== view);
+  }
+
+  renderCampaignHome();
+  renderLevelPicker();
+  renderHangar();
+  ui.startPanel.classList.remove('is-hidden');
+  ui.panelKicker.textContent = view === 'home' ? 'Operation Skybreak' : currentMission().act;
+  ui.panelTitle.textContent = view === 'home' ? 'Operation Skybreak' : 'Campaign';
+  ui.panelBody.textContent = view === 'home'
+    ? 'A ten-mission pulpy sci-fi campaign of briefings, radio chatter, salvage upgrades, and bigger saucers.'
+    : 'Choose the next sortie, tune the tank, or launch from the briefing room.';
+}
+
+function renderCampaignHome() {
+  const mission = CAMPAIGN_MISSIONS[Math.min(campaign.currentMission, CAMPAIGN_MISSIONS.length - 1)];
+  const completedCount = Object.keys(campaign.completed).length;
+  ui.campaignStatus.innerHTML = '';
+
+  const status = document.createElement('div');
+  status.className = 'campaign-status-line';
+  status.innerHTML = '<strong>' + completedCount + '/' + CAMPAIGN_MISSIONS.length + '</strong><span>missions complete</span>';
+
+  const next = document.createElement('div');
+  next.className = 'campaign-status-line';
+  next.innerHTML = '<strong>' + mission.title + '</strong><span>' + (campaign.currentMission >= CAMPAIGN_MISSIONS.length ? 'Campaign complete' : mission.objective) + '</span>';
+
+  const bank = document.createElement('div');
+  bank.className = 'campaign-status-line';
+  bank.innerHTML = '<strong>' + campaign.salvage + '</strong><span>salvage available</span>';
+
+  ui.campaignStatus.append(status, next, bank);
+  ui.campaignContinueButton.textContent = campaign.currentMission >= CAMPAIGN_MISSIONS.length ? 'Review Timeline' : 'Continue Campaign';
+}
+
+function showBriefing() {
+  const mission = currentMission();
+  ui.briefingKicker.textContent = mission.act;
+  ui.briefingTitle.textContent = mission.title;
+  ui.briefingBody.textContent = mission.briefing.body;
+  ui.briefingObjective.textContent = mission.objective;
+  ui.briefingReward.textContent = 'Reward: ' + mission.rewards.salvage + ' salvage';
+  showCampaignView('briefing');
+}
+
+function renderHangar() {
+  ui.hangarSalvage.textContent = 'Salvage: ' + campaign.salvage;
+  ui.hangarGrid.replaceChildren();
+
+  for (const upgrade of UPGRADE_DEFINITIONS) {
+    const tier = campaign.upgrades[upgrade.id] ?? 0;
+    const nextTier = upgrade.tiers[tier];
+    const card = document.createElement('article');
+    card.className = 'upgrade-card';
+
+    const title = document.createElement('strong');
+    title.textContent = upgrade.title;
+    const body = document.createElement('span');
+    body.textContent = upgrade.body;
+    const level = document.createElement('span');
+    level.textContent = 'Tier ' + tier + '/3';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    if (nextTier) {
+      button.textContent = 'Upgrade / ' + nextTier.cost + ' salvage';
+      button.disabled = campaign.salvage < nextTier.cost;
+      button.addEventListener('click', () => purchaseUpgrade(upgrade.id));
+    } else {
+      button.textContent = 'Maxed';
+      button.disabled = true;
+    }
+
+    card.append(title, body, level, button);
+    ui.hangarGrid.append(card);
+  }
+}
+
+function purchaseUpgrade(id) {
+  const upgrade = UPGRADE_DEFINITIONS.find((item) => item.id === id);
+  const tier = campaign.upgrades[id] ?? 0;
+  const nextTier = upgrade?.tiers[tier];
+  if (!upgrade || !nextTier || campaign.salvage < nextTier.cost) {
+    playSfx('warning');
+    return;
+  }
+
+  campaign.salvage -= nextTier.cost;
+  campaign.upgrades[id] = tier + 1;
+  game.hull = Math.min(game.hull + 8, maxHull());
+  saveCampaignState();
+  renderCampaignHome();
+  renderHangar();
+  playSfx('upgrade');
+  showMessage('Hangar upgrade', upgrade.title + ' upgraded to tier ' + (tier + 1) + '.');
+}
+
+function renderDebrief(result) {
+  const mission = CAMPAIGN_MISSIONS.find((item) => item.id === result.missionId) ?? currentMission();
+  ui.debriefKicker.textContent = result.success ? 'Mission complete' : 'Mission failed';
+  ui.debriefTitle.textContent = result.success ? mission.title + ' secured' : mission.title + ' failed';
+  ui.debriefBody.textContent = result.success ? mission.debrief.success : mission.debrief.failure;
+  ui.debriefStats.textContent = result.success
+    ? result.medal.toUpperCase() + ' medal / +' + result.salvageEarned + ' salvage / hull ' + Math.round(game.hull) + '/' + maxHull()
+    : 'Final score: ' + Math.floor(game.score) + ' / hull ' + Math.round(game.hull) + '/' + maxHull();
+  ui.debriefContinueButton.textContent = result.success
+    ? (campaign.currentMission >= CAMPAIGN_MISSIONS.length ? 'Review Timeline' : 'Next Briefing')
+    : 'Retry Briefing';
+  showCampaignView('debrief');
+}
+
+function completeCampaignMission(mission) {
+  const medal = medalForMission(mission);
+  const medalBonus = medal === 'gold' ? 80 : medal === 'silver' ? 40 : 15;
+  const salvageEarned = mission.rewards.salvage + medalBonus;
+  campaign.completed[mission.id] = true;
+  campaign.medals[mission.id] = bestMedal(campaign.medals[mission.id], medal);
+  campaign.salvage += salvageEarned;
+  campaign.unlockedMission = Math.max(campaign.unlockedMission, Math.min(CAMPAIGN_MISSIONS.length - 1, game.missionIndex + 1));
+  campaign.currentMission = Math.max(campaign.currentMission, Math.min(CAMPAIGN_MISSIONS.length, game.missionIndex + 1));
+  game.unlockedMission = campaign.unlockedMission;
+  saveCampaignState();
+  return { success: true, medal, salvageEarned, missionId: mission.id };
+}
+
+function medalForMission(mission) {
+  const hullRatio = game.hull / maxHull();
+  const fast = !mission.survivalTime || game.missionElapsed <= mission.survivalTime + 18;
+  if (hullRatio >= 0.78 && fast) return 'gold';
+  if (hullRatio >= 0.48) return 'silver';
+  return 'bronze';
+}
+
+function bestMedal(existing, next) {
+  const rank = { bronze: 1, silver: 2, gold: 3 };
+  if (!existing) return next;
+  return rank[next] > rank[existing] ? next : existing;
+}
+
 function selectMission(index) {
-  game.missionIndex = THREE.MathUtils.clamp(index, 0, MISSIONS.length - 1);
+  const nextIndex = THREE.MathUtils.clamp(index, 0, CAMPAIGN_MISSIONS.length - 1);
+  if (nextIndex > campaign.unlockedMission) {
+    playSfx('warning');
+    showMessage('Mission locked', 'Complete the current campaign sortie to open this route.');
+    return;
+  }
+  game.missionIndex = nextIndex;
+  if (!campaign.completed[CAMPAIGN_MISSIONS[nextIndex].id] || nextIndex >= campaign.currentMission) {
+    campaign.currentMission = nextIndex;
+  }
+  saveCampaignState();
   game.score = 0;
-  game.hull = 100;
+  game.hull = maxHull();
   game.over = false;
   game.completed = false;
   game.paused = false;
+  game.lastDebrief = null;
   ui.pausePanel.classList.add('is-hidden');
   resetMissionState();
   buildWorld(currentMission());
-  setMissionPanel(false);
+  showBriefing();
   showMessage(currentMission().title, currentMission().objective);
 }
 
@@ -1218,6 +1513,9 @@ function setPaused(paused) {
 }
 
 function showOptions(show) {
+  if (!show && !game.paused) {
+    ui.pausePanel.classList.add('is-hidden');
+  }
   ui.pauseMain.classList.toggle('is-hidden', show);
   ui.optionsMain.classList.toggle('is-hidden', !show);
   if (!show) {
@@ -1235,27 +1533,30 @@ function updatePointer(event) {
 
 function startMission() {
   const mission = currentMission();
+  unlockAudio();
   game.active = true;
   game.paused = false;
   game.over = false;
   game.completed = false;
   ui.pausePanel.classList.add('is-hidden');
   ui.startPanel.classList.add('is-hidden');
+  playSfx('start');
   showMessage(mission.title, mission.intro);
   beginMission(mission);
 }
 
 function resetCampaign() {
+  resetCampaignState();
   game.score = 0;
-  game.missionIndex = 0;
-  game.hull = 100;
+  game.missionIndex = campaign.currentMission;
+  game.hull = maxHull();
   game.completed = false;
   game.over = false;
   game.paused = false;
   ui.startButton.textContent = 'Start Mission';
   resetMissionState();
   buildWorld(currentMission());
-  setMissionPanel(false);
+  showCampaignView('home');
 }
 
 function resetMissionState() {
@@ -1265,15 +1566,18 @@ function resetMissionState() {
   game.missionKills = 0;
   game.missionElapsed = 0;
   game.missionBreak = 0;
+  game.radioFired = new Set();
   game.messageTimer = 0;
   game.shake = 0;
+  objectiveState = {};
 
-  [...ufos, ...shells, ...sparks].forEach((entity) => {
+  [...ufos, ...shells, ...sparks, ...objectives].forEach((entity) => {
     scene.remove(entity.group ?? entity.mesh);
   });
   ufos.length = 0;
   shells.length = 0;
   sparks.length = 0;
+  objectives.length = 0;
 
   tank.group.position.set(0, 0.34, 0);
   tank.group.rotation.set(0, 0, 0);
@@ -1289,12 +1593,14 @@ function resetMissionState() {
 function beginMission(mission) {
   resetMissionState();
   buildWorld(mission);
+  initObjectiveState(mission);
   game.active = true;
   game.paused = false;
   ui.pausePanel.classList.add('is-hidden');
   game.missionSpawnLeft = mission.ufoTotal;
   game.missionSpawnTimer = mission.firstSpawn;
   showMessage(mission.title, mission.objective);
+  fireRadioEvent(mission.radioEvents.find((event) => event.trigger === 'start'));
   updateHud();
 }
 
@@ -1302,42 +1608,22 @@ function completeMission() {
   const mission = currentMission();
   game.active = false;
   game.paused = false;
+  game.completed = true;
   game.missionBreak = 0;
   clearThreats();
   showMessage('Objective complete', mission.success);
-  game.unlockedMission = Math.max(game.unlockedMission, Math.min(MISSIONS.length - 1, game.missionIndex + 1));
-  saveProgress();
-
-  if (game.missionIndex < MISSIONS.length - 1) {
-    game.missionIndex += 1;
-    game.hull = Math.min(100, game.hull + 20);
-    buildWorld(currentMission());
-    setMissionPanel(true);
-  } else {
-    game.completed = true;
-    ui.startButton.textContent = 'Restart Campaign';
-    ui.panelKicker.textContent = 'Campaign complete';
-    ui.panelTitle.textContent = 'Skybreak Secured';
-    ui.panelBody.textContent = 'Final score: ' + game.score + '. All mission maps are clear.';
-    renderLevelPicker();
-    ui.startPanel.classList.remove('is-hidden');
-  }
+  game.lastDebrief = completeCampaignMission(mission);
+  game.hull = Math.min(maxHull(), game.hull + 20 + upgradeStats().repairBonus);
+  game.missionIndex = Math.min(campaign.currentMission, CAMPAIGN_MISSIONS.length - 1);
+  buildWorld(currentMission());
+  playSfx('complete');
+  renderDebrief(game.lastDebrief);
 }
 
 function clearThreats() {
   [...ufos, ...shells].forEach((entity) => scene.remove(entity.group ?? entity.mesh));
   ufos.length = 0;
   shells.length = 0;
-}
-
-function setMissionPanel(isNextMission) {
-  const mission = currentMission();
-  ui.panelKicker.textContent = isNextMission ? 'Next mission' : mission.mapName;
-  ui.panelTitle.textContent = mission.title;
-  ui.panelBody.textContent = mission.objective + ' ' + mission.intro;
-  ui.startButton.textContent = isNextMission ? 'Launch ' + mission.title.replace('Level ', 'L') : 'Start Mission';
-  renderLevelPicker();
-  ui.startPanel.classList.remove('is-hidden');
 }
 
 function shootShell() {
@@ -1370,12 +1656,13 @@ function shootShell() {
     life: Math.max(2.25, ufoLimit(mission) / shellSpeed + 0.75),
     radius: 0.55,
     target: assistedTarget,
-    assistStrength: assistedTarget ? (game.missionIndex === 0 ? 0.13 : 0.075) : 0
+    assistStrength: assistedTarget ? shellGuidanceStrength(game.missionIndex === 0 ? 0.13 : 0.075) : 0
   });
 
-  game.fireCooldown = mission.fireDelay;
+  game.fireCooldown = missionFireDelay(mission);
   game.shake = Math.max(game.shake, 0.09);
   spawnSparks(origin, new THREE.Color(0xffe2a0), 7, 0.42);
+  playSfx('fire');
 }
 
 function findAssistedTarget(origin, worldYaw, mission) {
@@ -1487,15 +1774,222 @@ function updateMission(dt) {
     }
   }
 
-  const killComplete = game.missionKills >= mission.destroyTarget;
-  const survivalComplete = mission.objectiveType === 'survive' && game.missionElapsed >= mission.survivalTime && game.missionKills >= mission.destroyTarget;
-  if ((mission.objectiveType !== 'survive' && killComplete) || survivalComplete) {
+  updateObjectives(dt, mission);
+  triggerRadioEvents(mission);
+
+  if (isMissionComplete(mission)) {
     completeMission();
+    return;
   } else if (mission.timeLimit && game.missionElapsed >= mission.timeLimit) {
     endGame('Storm corridor closed', 'The mission timer expired before the UFO objective was complete.');
-  } else if (game.missionSpawnLeft <= 0 && ufos.length === 0 && game.missionKills < mission.destroyTarget) {
+  } else if (shouldFailForEmptySky(mission)) {
     endGame('Objective failed', 'Too many UFOs escaped before the mission target was complete.');
   }
+}
+
+function initObjectiveState(mission) {
+  const script = mission.objectiveScript ?? {};
+  objectiveState = {
+    type: mission.objectiveType,
+    radioKeys: new Set(),
+    carrying: null,
+    returned: 0,
+    collected: Array(script.total ?? 0).fill(false),
+    progress: Array(script.nodes ?? 0).fill(0),
+    activated: Array(script.nodes ?? 0).fill(false),
+    pylons: Array(script.pylons ?? 0).fill(false),
+    pylonsDisabled: 0,
+    bossSpawned: false,
+    bossDestroyed: false,
+    bossPhase: 0
+  };
+}
+
+function updateObjectives(dt, mission) {
+  if (mission.objectiveType === 'collect') updateCollectObjective(mission);
+  if (mission.objectiveType === 'activate') updateActivateObjective(dt, mission);
+  if (mission.objectiveType === 'boss') updateBossObjective(dt, mission);
+  animateObjectiveProps(dt);
+}
+
+function updateCollectObjective(mission) {
+  const script = mission.objectiveScript ?? {};
+  const pickupRadius = script.pickupRadius ?? 4.2;
+  const returnRadius = script.returnRadius ?? 8;
+
+  if (objectiveState.carrying === null) {
+    for (const objective of objectives.filter((item) => item.type === 'core')) {
+      if (objectiveState.collected[objective.index]) continue;
+      if (distanceXZ(tank.group.position, objective.group.position) <= pickupRadius) {
+        objectiveState.carrying = objective.index;
+        objectiveState.collected[objective.index] = true;
+        objective.active = false;
+        objective.group.visible = false;
+        setObjectiveRadio('collectOne');
+        showMessage('Core aboard', 'Return to the central pad to bank the alien core.');
+        playSfx('upgrade');
+        break;
+      }
+    }
+  } else if (distanceXZ(tank.group.position, new THREE.Vector3(0, 0, 0)) <= returnRadius) {
+    objectiveState.returned += 1;
+    objectiveState.carrying = null;
+    showMessage('Core recovered', objectiveState.returned + '/' + (script.total ?? 3) + ' alien cores banked.');
+    playSfx('complete');
+    if (objectiveState.returned >= (script.total ?? 3)) setObjectiveRadio('collectAll');
+  }
+}
+
+function updateActivateObjective(dt, mission) {
+  const script = mission.objectiveScript ?? {};
+  const nodes = script.nodes ?? 1;
+  const radius = script.radius ?? 6;
+  const holdTime = script.holdTime ?? 2.2;
+  const requireContinuous = script.requireContinuous ?? true;
+
+  for (const objective of objectives.filter((item) => item.type === 'beacon')) {
+    const index = objective.index;
+    if (objectiveState.activated[index]) continue;
+    const near = distanceXZ(tank.group.position, objective.group.position) <= radius;
+    if (near) {
+      objectiveState.progress[index] = Math.min(holdTime, objectiveState.progress[index] + dt);
+      if (objectiveState.progress[index] >= holdTime) {
+        objectiveState.activated[index] = true;
+        objective.active = true;
+        objective.group.userData.light.intensity = 2.4;
+        showMessage('Beacon locked', activatedCount() + '/' + nodes + ' nodes linked.');
+        playSfx('complete');
+      }
+    } else if (requireContinuous) {
+      objectiveState.progress[index] = Math.max(0, objectiveState.progress[index] - dt * 0.7);
+    }
+  }
+
+  if (activatedCount() >= Math.ceil(nodes / 2)) setObjectiveRadio('activateHalf');
+}
+
+function updateBossObjective(dt, mission) {
+  const script = mission.objectiveScript ?? {};
+  const bossDelay = script.bossSpawnDelay ?? 6;
+  const escortKills = script.escortKills ?? 0;
+  const pylonsDone = !script.pylons || objectiveState.pylonsDisabled >= script.pylons;
+  const escortsDone = game.missionKills >= escortKills;
+
+  if (!objectiveState.bossSpawned && pylonsDone && escortsDone && game.missionElapsed >= bossDelay) {
+    const boss = createUfo(mission, {
+      type: script.bossType ?? 'carrier',
+      hp: script.bossHp ?? 8,
+      isBoss: true
+    });
+    ufos.push(boss);
+    objectiveState.bossSpawned = true;
+    showMessage('Boss contact', 'Carrier-class UFO entering the battle space.');
+    playSfx('warning');
+  }
+}
+
+function animateObjectiveProps(dt) {
+  for (const objective of objectives) {
+    const { group } = objective;
+    group.rotation.y += dt * (objective.type === 'pylon' ? 0.4 : 0.8);
+    if (objective.type === 'beacon') {
+      const progress = objectiveState.progress?.[objective.index] ?? 0;
+      const holdTime = currentMission().objectiveScript?.holdTime ?? 1;
+      group.userData.ring.scale.setScalar(1 + Math.min(0.42, progress / holdTime * 0.42));
+    }
+    if (objective.type === 'core') {
+      group.userData.core.position.y = 1.55 + Math.sin(timer.getElapsed() * 2.4 + objective.index) * 0.22;
+    }
+  }
+}
+
+function hitObjectiveWithShell(shell) {
+  if (currentMission().objectiveType !== 'boss') return false;
+  for (const objective of objectives.filter((item) => item.type === 'pylon')) {
+    if (!objective.active) continue;
+    if (shell.mesh.position.distanceTo(objective.group.position.clone().setY(shell.mesh.position.y)) < 3.2) {
+      disablePylon(objective.index, shell.mesh.position);
+      return true;
+    }
+  }
+  return false;
+}
+
+function disablePylon(index, position) {
+  if (objectiveState.pylons?.[index]) return;
+  objectiveState.pylons[index] = true;
+  objectiveState.pylonsDisabled += 1;
+  const objective = objectives.find((item) => item.type === 'pylon' && item.index === index);
+  if (objective) {
+    objective.active = false;
+    objective.group.userData.light.intensity = 0.2;
+    objective.group.userData.core.material = materials.objectiveDark;
+    objective.group.scale.y = 0.45;
+  }
+  spawnSparks(position, new THREE.Color(0x9ffff0), 26, 1.8);
+  game.score += 75;
+  showMessage('Pylon shattered', objectiveState.pylonsDisabled + '/' + objectiveState.pylons.length + ' gate pylons down.');
+  playSfx('explosion');
+  if (objectiveState.pylonsDisabled >= objectiveState.pylons.length) setObjectiveRadio('collectAll');
+}
+
+function activatedCount() {
+  return objectiveState.activated?.filter(Boolean).length ?? 0;
+}
+
+function setObjectiveRadio(key) {
+  objectiveState.radioKeys?.add(key);
+}
+
+function isMissionComplete(mission) {
+  if (mission.objectiveType === 'destroy') return game.missionKills >= mission.destroyTarget;
+  if (mission.objectiveType === 'protect') return game.missionKills >= mission.destroyTarget && !allTowersDestroyed();
+  if (mission.objectiveType === 'survive') {
+    return game.missionElapsed >= mission.survivalTime && game.missionKills >= mission.destroyTarget;
+  }
+  if (mission.objectiveType === 'collect') {
+    const total = mission.objectiveScript?.total ?? 0;
+    return objectiveState.returned >= total && game.missionKills >= mission.destroyTarget;
+  }
+  if (mission.objectiveType === 'activate') {
+    const nodes = mission.objectiveScript?.nodes ?? 0;
+    return activatedCount() >= nodes && game.missionKills >= mission.destroyTarget;
+  }
+  if (mission.objectiveType === 'boss') {
+    const pylons = mission.objectiveScript?.pylons ?? 0;
+    return objectiveState.bossDestroyed && objectiveState.pylonsDisabled >= pylons;
+  }
+  return false;
+}
+
+function shouldFailForEmptySky(mission) {
+  if (game.missionSpawnLeft > 0 || ufos.length > 0) return false;
+  if (mission.objectiveType === 'boss') {
+    const escortKills = mission.objectiveScript?.escortKills ?? 0;
+    return !objectiveState.bossSpawned && game.missionKills < escortKills;
+  }
+  if (mission.objectiveType === 'collect' || mission.objectiveType === 'activate') {
+    return game.missionKills < mission.destroyTarget;
+  }
+  return game.missionKills < mission.destroyTarget;
+}
+
+function triggerRadioEvents(mission) {
+  for (const event of mission.radioEvents ?? []) {
+    if (event.trigger === 'start') continue;
+    if (event.trigger === 'time' && game.missionElapsed >= event.at) fireRadioEvent(event);
+    if (event.trigger === 'kills' && game.missionKills >= event.count) fireRadioEvent(event);
+    if (event.trigger === 'hull' && game.hull <= maxHull() * ((event.below ?? 50) / 100)) fireRadioEvent(event);
+    if (event.trigger === 'objective' && objectiveState.radioKeys?.has(event.key)) fireRadioEvent(event);
+    if (event.trigger === 'bossPhase' && (objectiveState.bossPhase ?? 0) >= event.phase) fireRadioEvent(event);
+  }
+}
+
+function fireRadioEvent(event) {
+  if (!event || game.radioFired.has(event.id)) return;
+  game.radioFired.add(event.id);
+  showMessage(event.speaker + ' / ' + event.title, event.body);
+  playSfx('radio');
 }
 
 function updateShells(dt) {
@@ -1527,13 +2021,21 @@ function updateShells(dt) {
       spawnSparks(shell.mesh.position, new THREE.Color(0xffe6a1), 18, 1.35);
       scene.remove(shell.mesh);
       shells.splice(i, 1);
+      playSfx('hit');
 
       if (ufo.hp <= 0) {
         destroyUfo(hitIndex);
       } else {
+        if (ufo.isBoss && !ufo.phaseTriggered && ufo.hp <= ufo.maxHp * 0.5) {
+          ufo.phaseTriggered = true;
+          objectiveState.bossPhase = Math.max(objectiveState.bossPhase ?? 0, 1);
+        }
         ufo.group.scale.multiplyScalar(0.92);
         ufo.velocity.multiplyScalar(1.08);
       }
+    } else if (hitObjectiveWithShell(shell)) {
+      scene.remove(shell.mesh);
+      shells.splice(i, 1);
     } else if (shell.life <= 0 || shell.mesh.position.y > 54 || shell.mesh.position.length() > ufoLimit(currentMission()) + 44) {
       scene.remove(shell.mesh);
       shells.splice(i, 1);
@@ -1588,6 +2090,7 @@ function updateUfos(dt) {
     if (attackingTower) {
       pulseBeam(ufo);
       towerTarget.health -= mission.towerDamage * damageMultiplier * dt;
+      if (towerTarget.health < 62) setObjectiveRadio('towerDamaged');
       towerTarget.group.scale.y = THREE.MathUtils.lerp(0.82, 1, Math.max(0, towerTarget.health / 100));
       if (Math.random() < dt * 8) {
         spawnSparks(towerTarget.group.position.clone().add(new THREE.Vector3(random(-0.6, 0.6), 3.3, random(-0.6, 0.6))), new THREE.Color(0x7de0c5), 2, 0.55);
@@ -1596,6 +2099,7 @@ function updateUfos(dt) {
     } else if (attackingTank) {
       pulseBeam(ufo);
       game.hull -= mission.beamDamage * damageMultiplier * dt;
+      if (game.hull < maxHull() * 0.28 && Math.random() < dt * 1.8) playSfx('warning');
       game.shake = Math.max(game.shake, 0.18);
       if (Math.random() < dt * 10) {
         spawnSparks(tank.group.position.clone().add(new THREE.Vector3(random(-1.5, 1.5), 0.6, random(-1.5, 1.5))), new THREE.Color(0x7de0c5), 2, 0.55);
@@ -1646,30 +2150,39 @@ function destroyUfo(index) {
   ufos.splice(index, 1);
   game.missionKills += 1;
   game.score += ufo.value;
-  game.hull = Math.min(100, game.hull + 2);
+  game.hull = Math.min(maxHull(), game.hull + 2);
   game.shake = Math.max(game.shake, 0.2);
-  showMessage('Target down', game.missionKills + '/' + mission.destroyTarget + ' objective kills. +' + ufo.value + ' points.');
+  if (ufo.isBoss) {
+    objectiveState.bossDestroyed = true;
+    objectiveState.bossPhase = Math.max(objectiveState.bossPhase ?? 0, 2);
+    showMessage('Carrier down', 'Boss craft destroyed. +' + ufo.value + ' points.');
+    playSfx('explosion');
+  } else {
+    showMessage('Target down', game.missionKills + '/' + mission.destroyTarget + ' objective kills. +' + ufo.value + ' points.');
+    playSfx('explosion');
+  }
 }
 
 function damageHull(amount) {
   game.hull -= amount;
   game.shake = Math.max(game.shake, 0.18);
+  if (game.hull < maxHull() * 0.32) playSfx('warning');
   if (game.hull <= 0) endGame('Base overrun', 'Too many saucers escaped the defense grid.');
 }
 
 function endGame(title, body) {
+  const mission = currentMission();
   game.hull = Math.max(0, game.hull);
   game.over = true;
   game.active = false;
   game.paused = false;
+  game.completed = false;
   ui.pausePanel.classList.add('is-hidden');
   clearThreats();
-  ui.startButton.textContent = 'Restart Campaign';
-  ui.panelKicker.textContent = 'Mission failed';
-  ui.panelTitle.textContent = title;
-  ui.panelBody.textContent = body + ' Final score: ' + game.score + '.';
-  ui.startPanel.classList.remove('is-hidden');
+  game.lastDebrief = { success: false, missionId: mission.id };
   showMessage(title, body);
+  renderDebrief(game.lastDebrief);
+  playSfx('warning');
 }
 
 function spawnSparks(position, color, count, force) {
@@ -1728,8 +2241,8 @@ function updateHud() {
   const mission = currentMission();
   ui.score.textContent = String(Math.floor(game.score));
   ui.wave.textContent = String(game.missionIndex + 1);
-  ui.hull.style.transform = 'scaleX(' + THREE.MathUtils.clamp(game.hull / 100, 0, 1) + ')';
-  ui.charge.style.transform = 'scaleX(' + (1 - THREE.MathUtils.clamp(game.fireCooldown / mission.fireDelay, 0, 1)) + ')';
+  ui.hull.style.transform = 'scaleX(' + THREE.MathUtils.clamp(game.hull / maxHull(), 0, 1) + ')';
+  ui.charge.style.transform = 'scaleX(' + (1 - THREE.MathUtils.clamp(game.fireCooldown / missionFireDelay(mission), 0, 1)) + ')';
   if (game.messageTimer <= 0 && game.active && !game.over) {
     ui.messageTitle.textContent = mission.mapName;
     ui.messageBody.textContent = objectiveStatusText(mission);
@@ -1744,6 +2257,24 @@ function objectiveStatusText(mission) {
   if (mission.objectiveType === 'survive') {
     const remaining = Math.max(0, Math.ceil(mission.survivalTime - game.missionElapsed));
     return game.missionKills + '/' + mission.destroyTarget + ' raiders down. Survive ' + remaining + 's more.';
+  }
+  if (mission.objectiveType === 'collect') {
+    const total = mission.objectiveScript?.total ?? 0;
+    const cargo = objectiveState.carrying === null ? 'No core loaded' : 'Core loaded: return to pad';
+    return objectiveState.returned + '/' + total + ' cores recovered. ' + game.missionKills + '/' + mission.destroyTarget + ' UFOs down. ' + cargo + '.';
+  }
+  if (mission.objectiveType === 'activate') {
+    const nodes = mission.objectiveScript?.nodes ?? 0;
+    return activatedCount() + '/' + nodes + ' beacons locked. ' + game.missionKills + '/' + mission.destroyTarget + ' UFOs down.';
+  }
+  if (mission.objectiveType === 'boss') {
+    const pylons = mission.objectiveScript?.pylons ?? 0;
+    const escortTarget = mission.objectiveScript?.escortKills ?? mission.destroyTarget;
+    if (pylons > 0 && objectiveState.pylonsDisabled < pylons) {
+      return objectiveState.pylonsDisabled + '/' + pylons + ' pylons down. Shoot the glowing gate pylons.';
+    }
+    if (!objectiveState.bossSpawned) return game.missionKills + '/' + escortTarget + ' escorts down. Carrier inbound.';
+    return objectiveState.bossDestroyed ? 'Carrier destroyed. Stand by for debrief.' : 'Carrier engaged. Keep shells on the shielded hull.';
   }
   if (mission.timeLimit) {
     const remaining = Math.max(0, Math.ceil(mission.timeLimit - game.missionElapsed));
@@ -1807,15 +2338,142 @@ function saveSettings() {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
-function loadProgress() {
-  if (typeof localStorage === 'undefined') return 0;
-  const stored = Number(localStorage.getItem(PROGRESS_KEY));
-  return Number.isFinite(stored) ? THREE.MathUtils.clamp(stored, 0, MISSIONS.length - 1) : 0;
+function defaultCampaignState() {
+  return {
+    currentMission: 0,
+    unlockedMission: 0,
+    completed: {},
+    medals: {},
+    salvage: 0,
+    upgrades: Object.fromEntries(UPGRADE_DEFINITIONS.map((upgrade) => [upgrade.id, 0]))
+  };
 }
 
-function saveProgress() {
+function loadCampaignState() {
+  const fallback = defaultCampaignState();
+  if (typeof localStorage === 'undefined') return fallback;
+
+  try {
+    const stored = JSON.parse(localStorage.getItem(CAMPAIGN_SAVE_KEY) ?? 'null');
+    if (stored) return normalizeCampaignState({ ...fallback, ...stored });
+  } catch {
+    return fallback;
+  }
+
+  const legacyUnlocked = Number(localStorage.getItem(LEGACY_PROGRESS_KEY));
+  if (Number.isFinite(legacyUnlocked) && legacyUnlocked > 0) {
+    const migrated = defaultCampaignState();
+    migrated.unlockedMission = THREE.MathUtils.clamp(Math.floor(legacyUnlocked), 0, CAMPAIGN_MISSIONS.length - 1);
+    migrated.currentMission = migrated.unlockedMission;
+    for (let index = 0; index < migrated.unlockedMission; index += 1) {
+      const mission = CAMPAIGN_MISSIONS[index];
+      migrated.completed[mission.id] = true;
+      migrated.medals[mission.id] = 'bronze';
+    }
+    localStorage.setItem(CAMPAIGN_SAVE_KEY, JSON.stringify(migrated));
+    return migrated;
+  }
+
+  return fallback;
+}
+
+function normalizeCampaignState(state) {
+  const normalized = defaultCampaignState();
+  normalized.currentMission = THREE.MathUtils.clamp(Math.floor(Number(state.currentMission) || 0), 0, CAMPAIGN_MISSIONS.length);
+  normalized.unlockedMission = THREE.MathUtils.clamp(Math.floor(Number(state.unlockedMission) || 0), 0, CAMPAIGN_MISSIONS.length - 1);
+  normalized.salvage = Math.max(0, Math.floor(Number(state.salvage) || 0));
+
+  const validIds = new Set(CAMPAIGN_MISSIONS.map((mission) => mission.id));
+  for (const [id, completed] of Object.entries(state.completed ?? {})) {
+    if (validIds.has(id) && completed) normalized.completed[id] = true;
+  }
+  for (const [id, medal] of Object.entries(state.medals ?? {})) {
+    if (validIds.has(id) && ['bronze', 'silver', 'gold'].includes(medal)) normalized.medals[id] = medal;
+  }
+  for (const upgrade of UPGRADE_DEFINITIONS) {
+    normalized.upgrades[upgrade.id] = THREE.MathUtils.clamp(Math.floor(Number(state.upgrades?.[upgrade.id]) || 0), 0, upgrade.tiers.length);
+  }
+
+  return normalized;
+}
+
+function saveCampaignState() {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(PROGRESS_KEY, String(game.unlockedMission));
+  localStorage.setItem(CAMPAIGN_SAVE_KEY, JSON.stringify(campaign));
+}
+
+function resetCampaignState() {
+  const fresh = defaultCampaignState();
+  for (const key of Object.keys(campaign)) delete campaign[key];
+  Object.assign(campaign, fresh);
+  saveCampaignState();
+}
+
+function unlockAudio() {
+  if (typeof window === 'undefined') return;
+  if (!audioContext) {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    audioContext = new AudioCtor();
+  }
+  if (audioContext.state === 'suspended') audioContext.resume();
+}
+
+function playSfx(type) {
+  if (!audioContext) return;
+  const now = audioContext.currentTime;
+  const output = audioContext.createGain();
+  output.gain.setValueAtTime(0.0001, now);
+  output.gain.exponentialRampToValueAtTime(0.08, now + 0.012);
+  output.gain.exponentialRampToValueAtTime(0.0001, now + sfxLength(type));
+  output.connect(audioContext.destination);
+
+  const osc = audioContext.createOscillator();
+  osc.type = type === 'explosion' ? 'sawtooth' : type === 'radio' ? 'square' : 'triangle';
+  const [start, end] = sfxFrequencies(type);
+  osc.frequency.setValueAtTime(start, now);
+  osc.frequency.exponentialRampToValueAtTime(end, now + Math.max(0.04, sfxLength(type) * 0.82));
+  osc.connect(output);
+  osc.start(now);
+  osc.stop(now + sfxLength(type));
+
+  if (type === 'explosion' || type === 'fire') {
+    const second = audioContext.createOscillator();
+    second.type = 'square';
+    second.frequency.setValueAtTime(type === 'fire' ? 92 : 52, now);
+    second.frequency.exponentialRampToValueAtTime(type === 'fire' ? 46 : 28, now + sfxLength(type));
+    second.connect(output);
+    second.start(now);
+    second.stop(now + sfxLength(type));
+  }
+}
+
+function sfxLength(type) {
+  return {
+    ui: 0.08,
+    start: 0.22,
+    fire: 0.13,
+    hit: 0.12,
+    explosion: 0.34,
+    warning: 0.18,
+    upgrade: 0.24,
+    complete: 0.28,
+    radio: 0.16
+  }[type] ?? 0.1;
+}
+
+function sfxFrequencies(type) {
+  return {
+    ui: [640, 980],
+    start: [180, 620],
+    fire: [220, 92],
+    hit: [740, 310],
+    explosion: [130, 46],
+    warning: [320, 210],
+    upgrade: [420, 1100],
+    complete: [360, 880],
+    radio: [900, 520]
+  }[type] ?? [440, 660];
 }
 
 function angleDelta(from, to) {
